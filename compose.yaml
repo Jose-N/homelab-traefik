@@ -41,7 +41,7 @@ services:
       - "traefik.http.routers.traefik-certs.tls.domains[0].main=darkfleetlabs.com"
       - "traefik.http.routers.traefik-certs.tls.domains[0].sans=*.internal.darkfleetlabs.com"
       # Dummy rule just to trigger the cert resolver block above
-      - "traefik.http.routers.traefik-certs.rule=Host(`traefik.://darkfleetlabs.com`)"
+      - "traefik.http.routers.traefik-certs.rule=Host(`darkfleetlabs.com`)"
       - "traefik.http.routers.traefik-certs.entrypoints=websecure"
       - "traefik.http.services.traefik-certs.loadbalancer.server.port=8080"
 
