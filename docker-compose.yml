@@ -1,0 +1,58 @@
+services:
+  traefik:
+    image: traefik:v3.7
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Pass your Cloudflare API Token here
+      - CF_DNS_API_TOKEN=${CLOUD_FLARE_API_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Store your SSL certificates persistently
+      - ./letsencrypt:/letsencrypt
+    command:
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      # Enable Docker Provider
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Automatically redirect HTTP to HTTPS
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # Let's Encrypt DNS Challenge Setup
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+    labels:
+      - "traefik.enable=true"
+      # This block instructs Traefik to pull the single wildcard cert on startup
+      - "traefik.http.routers.traefik-certs.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-certs.tls.domains[0].main=://darkfleetlabs.com"
+      - "traefik.http.routers.traefik-certs.tls.domains[0].sans=*.://darkfleetlabs.com"
+      # Dummy rule just to trigger the cert resolver block above
+      - "traefik.http.routers.traefik-certs.rule=Host(`traefik.://darkfleetlabs.com`)"
+      - "traefik.http.routers.traefik-certs.entrypoints=websecure"
+      - "traefik.http.services.traefik-certs.loadbalancer.server.port=8080"
+
+  # Example internal application
+  whoami:
+    image: traefik/whoami
+    container_name: internal-app
+    restart: unless-stopped
+    exposed: true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`://darkfleetlabs.com`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.whoami.tls.certresolver=cloudflare"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
