@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    networks:
+      - proxy
     ports:
       - "80:80"
       - "443:443"
@@ -47,6 +49,8 @@ services:
   whoami:
     image: traefik/whoami
     container_name: internal-app
+    networks:
+      - proxy
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
@@ -55,3 +59,7 @@ services:
       - "traefik.http.routers.whoami.tls=true"
       - "traefik.http.routers.whoami.tls.certresolver=cloudflare"
       - "traefik.http.services.whoami.loadbalancer.server.port=80"
+
+networks:
+  proxy:
+    name: proxy
