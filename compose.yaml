@@ -6,7 +6,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
-      - proxy
+      - traefik
     ports:
       - "80:80"
       - "443:443"
@@ -20,6 +20,9 @@ services:
     command:
       - "--global.checknewversion=false"
       - "--global.sendanonymoususage=false"
+      # API & Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
       # Enable Docker Provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -36,6 +39,11 @@ services:
       - "--certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json"
     labels:
       - "traefik.enable=true"
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`traefik-dashboard.internal.darkfleetlabs.com`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
       # This block instructs Traefik to pull the single wildcard cert on startup
       - "traefik.http.routers.traefik-certs.tls.certresolver=cloudflare"
       - "traefik.http.routers.traefik-certs.tls.domains[0].main=darkfleetlabs.com"
@@ -45,21 +53,6 @@ services:
       - "traefik.http.routers.traefik-certs.entrypoints=websecure"
       - "traefik.http.services.traefik-certs.loadbalancer.server.port=8080"
 
-  # Example internal application
-  whoami:
-    image: traefik/whoami
-    container_name: internal-app
-    networks:
-      - proxy
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.whoami.rule=Host(`whoami.internal.darkfleetlabs.com`)"
-      - "traefik.http.routers.whoami.entrypoints=websecure"
-      - "traefik.http.routers.whoami.tls=true"
-      - "traefik.http.routers.whoami.tls.certresolver=cloudflare"
-      - "traefik.http.services.whoami.loadbalancer.server.port=80"
-
 networks:
-  proxy:
-    name: proxy
+  traefik:
+    name: traefik
